@@ -33,6 +33,17 @@ int ramcrc32bd_create(const struct lfs_config *cfg,
                     * sizeof(uint32_t)))
             == 0);
 
+    // Make sure the requested error correction is possible
+    LFS_ASSERT(bdcfg->error_correction <= 0
+            || bdcfg->error_correction < 1
+            || cfg->read_size <= 536870907);
+    LFS_ASSERT(bdcfg->error_correction <= 0
+            || bdcfg->error_correction < 2
+            || cfg->read_size <= 371);
+    LFS_ASSERT(bdcfg->error_correction <= 0
+            || bdcfg->error_correction < 3
+            || cfg->read_size <= 21);
+
     // allocate buffer?
     if (bd->cfg->buffer) {
         bd->buffer = bd->cfg->buffer;
@@ -129,7 +140,8 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
             //
             // this gets a bit funky since most CRCs are bit-reversed and
             // shift/overflow right
-            if (cfg->read_size <= 536870907) {
+            if ((!bd->cfg->error_correction || bd->cfg->error_correction >= 1)
+                    && cfg->read_size <= 536870907) {
                 uint32_t e = 0x80000000;
                 for (lfs_size_t i = 0; i < bd->cfg->code_size*8; i++) {
                     if (e == (crc_ ^ crc)) {
@@ -154,7 +166,8 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
             }
 
             // try to fix 2 bit errors
-            if (cfg->read_size <= 371) {
+            if ((!bd->cfg->error_correction || bd->cfg->error_correction >= 2)
+                    && cfg->read_size <= 371) {
                 uint32_t e0 = 0x80000000;
                 for (lfs_size_t i0 = 0; i0 < bd->cfg->code_size*8; i0++) {
                     uint32_t e1 = 0x80000000;
@@ -189,7 +202,8 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
             }
 
             // try to fix 3 bit errors
-            if (cfg->read_size <= 21) {
+            if ((!bd->cfg->error_correction || bd->cfg->error_correction >= 3)
+                    && cfg->read_size <= 21) {
                 uint32_t e0 = 0x80000000;
                 for (lfs_size_t i0 = 0; i0 < bd->cfg->code_size*8; i0++) {
                   uint32_t e1 = 0x80000000;

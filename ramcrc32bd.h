@@ -40,6 +40,16 @@ struct ramcrc32bd_config {
     // Number of erase blocks on the device.
     lfs_size_t erase_count;
 
+    // Number of bit errors to try to correct.
+    //
+    // There is a tradeoff here. Every bit errors you try to correct is two
+    // fewer bit errors you can detect reliably. That being said, recovering
+    // from errors is usually more useful than bailing on errors.
+    //
+    // By default, when zero, tries to correct as many errors as possible.
+    // -1 disables error correction and errors on any errors.
+    lfs_ssize_t error_correction;
+
     // Optional statically allocated buffer for the block device.
     void *buffer;
 };
