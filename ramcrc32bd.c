@@ -141,13 +141,13 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
             // this gets a bit funky since most CRCs are bit-reversed and
             // shift/overflow right
             if ((!bd->cfg->error_correction || bd->cfg->error_correction >= 1)
-                    && cfg->read_size <= 536870907) {
+                    && bd->cfg->code_size-sizeof(uint32_t) <= 536870907) {
                 uint32_t e = 0x80000000;
                 for (lfs_size_t i = 0; i < bd->cfg->code_size*8; i++) {
                     if (e == (crc_ ^ crc)) {
                         // found a 1 bit solution
                         lfs_size_t bit = bd->cfg->code_size*8-1 - i;
-                        if (bit/8 < cfg->read_size) {
+                        if (bit/8 < bd->cfg->code_size-sizeof(uint32_t)) {
                             buffer_[bit/8] ^= 1 << (bit%8);
                         }
                         LFS_DEBUG("Found correctable ramcrc32bd error "
@@ -167,7 +167,7 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
 
             // try to fix 2 bit errors
             if ((!bd->cfg->error_correction || bd->cfg->error_correction >= 2)
-                    && cfg->read_size <= 371) {
+                    && bd->cfg->code_size-sizeof(uint32_t) <= 371) {
                 uint32_t e0 = 0x80000000;
                 for (lfs_size_t i0 = 0; i0 < bd->cfg->code_size*8; i0++) {
                     uint32_t e1 = 0x80000000;
@@ -176,10 +176,10 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
                             // found a 2 bit solution
                             lfs_size_t bit0 = bd->cfg->code_size*8-1 - i0;
                             lfs_size_t bit1 = bd->cfg->code_size*8-1 - i1;
-                            if (bit0/8 < cfg->read_size) {
+                            if (bit0/8 < bd->cfg->code_size-sizeof(uint32_t)) {
                                 buffer_[bit0/8] ^= 1 << (bit0%8);
                             }
-                            if (bit1/8 < cfg->read_size) {
+                            if (bit1/8 < bd->cfg->code_size-sizeof(uint32_t)) {
                                 buffer_[bit1/8] ^= 1 << (bit1%8);
                             }
                             LFS_DEBUG("Found correctable ramcrc32bd error "
@@ -203,7 +203,7 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
 
             // try to fix 3 bit errors
             if ((!bd->cfg->error_correction || bd->cfg->error_correction >= 3)
-                    && cfg->read_size <= 21) {
+                    && bd->cfg->code_size-sizeof(uint32_t) <= 21) {
                 uint32_t e0 = 0x80000000;
                 for (lfs_size_t i0 = 0; i0 < bd->cfg->code_size*8; i0++) {
                   uint32_t e1 = 0x80000000;
@@ -215,13 +215,13 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
                           lfs_size_t bit0 = bd->cfg->code_size*8-1 - i0;
                           lfs_size_t bit1 = bd->cfg->code_size*8-1 - i1;
                           lfs_size_t bit2 = bd->cfg->code_size*8-1 - i2;
-                          if (bit0/8 < cfg->read_size) {
+                          if (bit0/8 < bd->cfg->code_size-sizeof(uint32_t)) {
                               buffer_[bit0/8] ^= 1 << (bit0%8);
                           }
-                          if (bit1/8 < cfg->read_size) {
+                          if (bit1/8 < bd->cfg->code_size-sizeof(uint32_t)) {
                               buffer_[bit1/8] ^= 1 << (bit1%8);
                           }
-                          if (bit2/8 < cfg->read_size) {
+                          if (bit2/8 < bd->cfg->code_size-sizeof(uint32_t)) {
                               buffer_[bit2/8] ^= 1 << (bit2%8);
                           }
                           LFS_DEBUG("Found correctable ramcrc32bd error "
@@ -258,9 +258,9 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
 fixed:;
         }
 
-        off += cfg->read_size;
-        buffer_ += cfg->read_size;
-        size -= cfg->read_size;
+        off += bd->cfg->code_size-sizeof(uint32_t);
+        buffer_ += bd->cfg->code_size-sizeof(uint32_t);
+        size -= bd->cfg->code_size-sizeof(uint32_t);
     }
 
     RAMCRC32BD_TRACE("ramcrc32bd_read -> %d", 0);
@@ -303,9 +303,9 @@ int ramcrc32bd_prog(const struct lfs_config *cfg, lfs_block_t block,
                 &crc,
                 sizeof(uint32_t));
 
-        off += cfg->prog_size;
-        buffer_ += cfg->prog_size;
-        size -= cfg->prog_size;
+        off += bd->cfg->code_size-sizeof(uint32_t);
+        buffer_ += bd->cfg->code_size-sizeof(uint32_t);
+        size -= bd->cfg->code_size-sizeof(uint32_t);
     }
 
     RAMCRC32BD_TRACE("ramcrc32bd_prog -> %d", 0);
