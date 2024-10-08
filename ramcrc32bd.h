@@ -42,9 +42,9 @@ struct ramcrc32bd_config {
 
     // Number of bit errors to try to correct.
     //
-    // There is a tradeoff here. Every bit errors you try to correct is two
+    // There is a tradeoff here. Every bit error you try to correct is two
     // fewer bit errors you can detect reliably. That being said, recovering
-    // from errors is usually more useful than bailing on errors.
+    // from errors is usually more useful.
     //
     // By default, when zero, tries to correct as many errors as possible.
     // -1 disables error correction and errors on any errors.

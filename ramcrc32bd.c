@@ -24,24 +24,24 @@ int ramcrc32bd_create(const struct lfs_config *cfg,
 
     // The from code size to message size is a bit complicated, so let's make
     // sure things are configured correctly
-    LFS_ASSERT(bdcfg->erase_size % bdcfg->code_size == 0);
-    LFS_ASSERT(cfg->read_size % (bdcfg->code_size-sizeof(uint32_t)) == 0);
-    LFS_ASSERT(cfg->prog_size % (bdcfg->code_size-sizeof(uint32_t)) == 0);
+    LFS_ASSERT(bd->cfg->erase_size % bd->cfg->code_size == 0);
+    LFS_ASSERT(cfg->read_size % (bd->cfg->code_size-sizeof(uint32_t)) == 0);
+    LFS_ASSERT(cfg->prog_size % (bd->cfg->code_size-sizeof(uint32_t)) == 0);
     LFS_ASSERT(cfg->block_size
-            % (bdcfg->erase_size
-                - ((bdcfg->erase_size/bdcfg->code_size)
+            % (bd->cfg->erase_size
+                - ((bd->cfg->erase_size/bd->cfg->code_size)
                     * sizeof(uint32_t)))
             == 0);
 
     // Make sure the requested error correction is possible
-    LFS_ASSERT(bdcfg->error_correction <= 0
-            || bdcfg->error_correction < 1
+    LFS_ASSERT(bd->cfg->error_correction <= 0
+            || bd->cfg->error_correction < 1
             || cfg->read_size <= 536870907);
-    LFS_ASSERT(bdcfg->error_correction <= 0
-            || bdcfg->error_correction < 2
+    LFS_ASSERT(bd->cfg->error_correction <= 0
+            || bd->cfg->error_correction < 2
             || cfg->read_size <= 371);
-    LFS_ASSERT(bdcfg->error_correction <= 0
-            || bdcfg->error_correction < 3
+    LFS_ASSERT(bd->cfg->error_correction <= 0
+            || bd->cfg->error_correction < 3
             || cfg->read_size <= 21);
 
     // allocate buffer?
