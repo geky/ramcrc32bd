@@ -64,8 +64,8 @@ code = '''
 
 # test random 2 bit errors
 [cases.test_detection_2_bits_prng]
-defines.SEED = 42
-defines.N = 10000
+defines.SEED = 'range(10)'
+defines.N = 1000
 code = '''
     ramcrc32bd_t ramcrc32bd;
     struct lfs_config cfg_ = *cfg;
@@ -120,8 +120,8 @@ code = '''
 
 # test random 3 bit errors
 [cases.test_detection_3_bits_prng]
-defines.SEED = 42
-defines.N = 10000
+defines.SEED = 'range(10)'
+defines.N = 1000
 code = '''
     ramcrc32bd_t ramcrc32bd;
     struct lfs_config cfg_ = *cfg;
@@ -179,8 +179,8 @@ code = '''
 
 # test random 6 bit errors
 [cases.test_detection_6_bits_prng]
-defines.SEED = 42
-defines.N = 10000
+defines.SEED = 'range(10)'
+defines.N = 1000
 # this only works up to ~16 byte code words
 if = 'READ_SIZE <= 16'
 code = '''
