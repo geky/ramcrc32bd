@@ -20,7 +20,7 @@ See also:
 - [littlefs][littlefs]
 - [ramrsbd][ramrsbd]
 
-## RAM?
+### RAM?
 
 Right now, [littlefs's][littlefs] block device API is limited in terms of
 composability. It would be great to fix this on a major API change, but
@@ -28,7 +28,7 @@ in the meantime, a RAM-backed block device provides a simple example of
 error-correction that users may be able to reimplement in their own
 block devices.
 
-## How it works
+### How it works
 
 First, a quick primer on [CRCs][crc].
 
@@ -76,15 +76,17 @@ binary division:
     -------------------------------------
     = 00000000 00000000 00000000 00111011
                                  '--.---'
-crc = 0x3b <------------------------'
+        .---------------------------'
+        v
+crc = 0x3b
 ```
 
-You can describe this mathematically in [$GF(2)$][gf2] (the extra $x^|P|$
-represents shifting the message to make space for the CRC), but the
-above example is probably easier to understand:
+You can describe this mathematically in [GF(2)][gf2] (the extra
+$x^{\left|P(x)\right|}$ represents shifting the message to make space for
+the CRC), but the above example is probably easier to understand:
 
 $$
-C(x) = M(x) - (M(x) \bmod P(x))
+C(x) = M(x) x^{\left|P(x)\right|} - (M(x) x^{\left|P(x)\right|} \bmod P(x))
 $$
 
 The neat thing is that this remainder operation does a real good job of
@@ -93,10 +95,10 @@ unlikely a message with a bit-error will result in the same CRC.
 
 ```
 a couple bit errors:
-    = 01101010 01101001 00100001 00000000 => ........ (0x.. != 0x..)
-    = 01101000 01101000 00100001 00000000 => ........ (0x.. != 0x..)
-    = 01101000 01101001 01100001 00000000 => ........ (0x.. != 0x..)
-    = 01101000 01101001 00100001 00000100 => ........ (0x.. != 0x..)
+    = 01101010 01101001 00100001 00000000 => 11101101 (0xed != 0x3b)
+    = 01101000 01101000 00100001 00000000 => 00101110 (0x2e != 0x3b)
+    = 01101000 01101001 01100001 00000000 => 11111100 (0xfc != 0x3b)
+    = 01101000 01101001 00100001 00000100 => 00110011 (0x33 != 0x3b)
 ```
 
 How unlikely? Well thanks to Philip Koopman's [exhaustive CRC work][koopman-crc],
@@ -148,12 +150,34 @@ $\left\lfloor\frac{HD-1}{2}\right\rfloor$.
 Ok, but that's enough about theory. How do actually correct these
 bit-errors?
 
-The answer is brute force. Try every bit-flip until we find a matching
-CRC. Since we know our Hamming distance is >=3, this should only ever
-find one valid codeword, the original codeword:
+The simple/naive/cheap answer is brute force. Try every bit-flip until we
+find a matching CRC. Since we know our Hamming distance is >=3, this
+should only ever find one valid codeword, the original codeword:
 
 ```
-TODO
+brute force search:
+    = 01101000 01101001 01100001 00000000 => 11111100 (0xfc != 0x3b)
+    ^ 1                                   => 11110111 (0xf7 != 0x3b)
+    ^  1                                  => 01111010 (0x7a != 0x3b)
+    ^   1                                 => 10111111 (0xbf != 0x3b)
+    ^    1                                => 01011110 (0x5e != 0x3b)
+    ^     1                               => 10101101 (0xad != 0x3b)
+    ^      1                              => 01010111 (0x57 != 0x3b)
+    ^       1                             => 00101010 (0x2a != 0x3b)
+    ^        1                            => 10010111 (0x97 != 0x3b)
+    ^          1                          => 01001010 (0x4a != 0x3b)
+    ^           1                         => 10100111 (0xa7 != 0x3b)
+    ^            1                        => 01010010 (0x52 != 0x3b)
+    ^             1                       => 10101011 (0xab != 0x3b)
+    ^              1                      => 01010100 (0x54 != 0x3b)
+    ^               1                     => 10101000 (0xa8 != 0x3b)
+    ^                1                    => 11010110 (0xd6 != 0x3b)
+    ^                 1                   => 11101001 (0xe9 != 0x3b)
+    ^                   1                 => 01110101 (0x75 != 0x3b)
+    ^                    1                => 00111011 (0x3b == 0x3b) !!! found our bit-error
+                                                         ^- note no CRC repeats
+corrected message:
+    = 01101000 01101001 00100001 00000000 => 00111011 (0x3b == 0x3b)
 ```
 
 If we don't find a valid codeword, we must have had at least 2
@@ -163,6 +187,97 @@ This idea can be extended to CRCs with larger Hamming distances by brute
 force searching multiple bit-errors with nested loops. See
 [ramcrc32bd_read][ramcrc32bd_read] for an example of up to 3 bit-errors
 with littlefs's CRC-32.
+
+### Tricks
+
+There are a few tricks worth noting in ramcrc32bd:
+
+1. Try the faster solutions first.
+
+   Correcting 1 bit-error, $O(n)$, is much faster than correcting
+   2 bit-errors, $O(n^2)$, and 1 bit-errors are also much more common. It
+   makes sense to only search for more bit-errors when a solution with
+   fewer bit-errors could not be found.
+
+   This means ramcrc32bd should read quite quickyl in the common case of
+   few/none bit-errors. Though this does risk reads sort of slowing down
+   as bit-errors develop.
+
+2. We don't actually need to permute the message for every bit-flip.
+
+   CRCs are pretty nifty in that they're linear. The CRC of the xor
+   of two messages is equivalent to the xor of the two CRCS:
+
+   ```
+   crc(a xor b):
+       = 01101000 01101001 01100001 00000000
+       ^                    1
+       -------------------------------------
+       = 01101000 01101001 00100001 00000000 => 00111011 (0x3b == 0x3b)
+
+   crc(a) xor crc(b):
+       = 01101000 01101001 01100001 00000000 =>   11111100 (0xfc)
+       ^                    1                => ^ 11000111 (0xc7)
+                                                ----------
+                                                = 00111011 (0x3b == 0x3b)
+   ```
+
+   This means we can quickly check the effect of a bit-flip by xoring our
+   CRC with the CRC of the bit flip.
+
+   If this wasn't convenient enough, shifting (multiplying by 2) is also
+   preserved over CRCs:
+
+   ```
+   crc(a << 1):
+       =                     1               => 11100000 (0xe0)
+       s                    1                => 11000111 (0xc7)
+
+   crc(crc(a) << 1):
+       =                     1               =>     11100000 (0xe0)
+                                                s 1 11000000
+                                                ^ 1 00000111
+                                                ------------
+                                                = 0 11000111 (0xc7)
+   ```
+
+   So testing every bit-flip requires only a single register that we
+   repeatedly shift and xor until we find a CRC match (or don't).
+
+   Once we find a match, we can use the number of shifts to figure out
+   which bit we needed to flip in the original message:
+
+   ```
+   fancy brute force search:
+       = 01101000 01101001 01100001 00000000 => 11111100 (0xfc != 0x3b)
+       s                          0 00000001 => 11111101 (0xfd != 0x3b)
+       s                          0 00000010 => 11111110 (0xfe != 0x3b)
+       s                          0 00000100 => 11111000 (0xf8 != 0x3b)
+       s                          0 00001000 => 11110100 (0xf4 != 0x3b)
+       s                          0 00010000 => 11101100 (0xec != 0x3b)
+       s                          0 00100000 => 11011100 (0xdc != 0x3b)
+       s                          0 01000000 => 10111100 (0xbc != 0x3b)
+       s                          0 10000000 => 01111100 (0x7c != 0x3b)
+       s                          1 00000000
+       ^                          1 00000111
+       =                          0 00000111 => 11111011 (0xfb != 0x3b)
+       s                          0 00001110 => 11110010 (0xf2 != 0x3b)
+       s                       (1)0 00011100 => 11100000 (0xe0 != 0x3b) 
+       s                      (1) 0 00111000 => 11000100 (0xc4 != 0x3b) 
+       s                     (1)  0 01110000 => 10001100 (0x8c != 0x3b) 
+       s                    (1)   0 11100000 => 00011100 (0x1c != 0x3b) 
+       s                          1 11000000
+       ^                          1 00000111
+       =                   (1)    0 11000111 => 00111011 (0x3b == 0x3b) !!! found our bit-error
+                                                            ^- note no CRC repeats
+   corrected message:
+       = 01101000 01101001 00100001 00000000 => 00111011 (0x3b == 0x3b)
+   ```
+
+   Still $O(n^e)$, but limited only by your CPU's shift, xor, and
+   branching hardware. No memory required.
+
+   See [ramcrc32bd_read][ramcrc32bd_read] for an implementation of this.
 
 ### Tradeoffs
 
@@ -198,51 +313,10 @@ Two big tradeoffs:
    to to $O(n)$, about the same runtime it takes to actually read the
    message.
 
-### Tricks
 
-There are a few tricks worth noting in ramcrc32bd:
+### Testing
 
-1. Try the faster solutions first.
-
-   Correcting 1 bit-error, $O(n)$, is much faster than correcting
-   2 bit-errors, $O(n^2)$, and 1 bit-errors are also much more common. It
-   makes sense to only search for more bit-errors when a solution with
-   fewer bit-errors could not be found.
-
-   This means ramcrc32bd should read quite quickyl in the common case of
-   few/none bit-errors. Though this does risk reads sort of slowing down
-   as bit-errors develop.
-
-2. We don't actually need to permute the message for every bit-flip.
-
-   CRCs are pretty nifty in that they're linear. The CRC of the xor
-   of two messages is equivalent to the xor of the two CRCS:
-
-   ```
-   TODO
-   ```
-
-   This means we can quickly check the effect of a bit-flip by xoring our
-   CRC with the CRC of the bit flip.
-
-   If this wasn't convenient enough, shifting (multiplying by 2) is also
-   preserved over CRCs:
-
-   ```
-   TODO
-   ```
-
-   So testing every bit-flip requires only a single register that we
-   repeatedly shift and xor until we find a CRC match (or don't).
-
-   Once we find a match, we can use the number of shifts to figure out
-   which bit we needed to flip in the original message.
-
-   Still $O(n^e)$, but limited only by your CPU's shift, xor, and
-   branching hardware. No memory required.
-
-   See [ramcrc32bd_read][ramcrc32bd_read] for an implementation of this.
-
+TODO
 
 
 
