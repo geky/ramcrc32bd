@@ -248,7 +248,7 @@ int ramcrc32bd_read(const struct lfs_config *cfg, lfs_block_t block,
             }
 
             // no solution?
-            LFS_DEBUG("Found uncorrectable ramcrc32bd crc mismatch "
+            LFS_WARN("Found uncorrectable ramcrc32bd crc mismatch "
                     "0x%"PRIx32".%"PRIx32" %"PRIu32", "
                     "crc32 %08"PRIx32" (!= %08"PRIx32")",
                     block, off_,
