@@ -34,8 +34,8 @@ First, a quick primer on [CRCs][crc].
 
 Some of why CRCs are so prevalent because they are mathematically quite
 pure. You view your message as a big [binary polynomial][binary-polynomial],
-divide it by the CRC polynomial (choosing a good CRC polynomial is the
-hard part), and the remainder is your CRC:
+divide it by a predefined polynomial (choosing a good CRC polynomial is
+the hard part), and the remainder is your CRC:
 
 ```
 message = "hi!":
@@ -136,11 +136,10 @@ away from the original codeword, and at least 3 bit-flips away from any
 other codeword. It's not until we have 2 bit-errors that the original
 codeword becomes ambiguous.
 
-Of course more bits generally means a better CRC. littlefs's CRC-32, for
-example, has a Hamming distance of 7 up to 171 bits (21 bytes). This
-means we can reliably correct up to 3 bit-errors in any message <= 21
-bytes (12 byte message + 4 byte CRC makes for a nice 16 byte codeword,
-for example).
+But this is only an 8-bit CRC. Generally, more bits means a better CRC.
+littlefs's 32-bit CRC, for example, has a Hamming distance of 7 up to
+171 bits (21 bytes), which means for any message <=21 bytes we can
+reliably correct up to 3 bit-errors.
 
 In general the number of bits we we can reliably correct is
 $\left\lfloor\frac{HD-1}{2}\right\rfloor$.
@@ -197,7 +196,7 @@ There are a few tricks worth noting in ramcrc32bd:
    Correcting 1 bit-error, $O(n)$, is much faster than correcting
    2 bit-errors, $O(n^2)$, and 1 bit-errors are also much more common. It
    makes sense to only search for more bit-errors when a solution with
-   fewer bit-errors could not be found.
+   fewer bit-errors can't be found.
 
    This means ramcrc32bd should read quite quickyl in the common case of
    few/none bit-errors. Though this does risk reads sort of slowing down
@@ -260,8 +259,8 @@ There are a few tricks worth noting in ramcrc32bd:
        s                          0 10000000 => 01111100 (0x7c != 0x3b)
        s                          1 00000000
        ^                          1 00000111
-       =                          0 00000111 => 11111011 (0xfb != 0x3b)
-       s                          0 00001110 => 11110010 (0xf2 != 0x3b)
+       =                         (1)00000111 => 11111011 (0xfb != 0x3b)
+       s                        (1) 00001110 => 11110010 (0xf2 != 0x3b)
        s                       (1)0 00011100 => 11100000 (0xe0 != 0x3b) 
        s                      (1) 0 00111000 => 11000100 (0xc4 != 0x3b) 
        s                     (1)  0 01110000 => 10001100 (0x8c != 0x3b) 
@@ -275,16 +274,16 @@ There are a few tricks worth noting in ramcrc32bd:
    ```
 
    Still $O(n^e)$, but limited only by your CPU's shift, xor, and
-   branching hardware. No memory required.
+   branching hardware. No memory accesses required.
 
    See [ramcrc32bd_read][ramcrc32bd_read] for an implementation of this.
 
 ### Tradeoffs
 
-Two big tradeoffs:
+Using CRCs for error-correction has two big caveats:
 
-1. For any error-correcting code, attempting to _correct_ errors reduces
-   the code's ability to _detect_ errors.
+1. For _any_ error-correcting code, attempting to _correct_ errors
+   reduces the code's ability to _detect_ errors.
 
    In the HD=4 example, when we assumed 1 bit-error, if there were
    actually 3 bit-errors, we would have assumed wrong and "corrected" to
@@ -292,26 +291,28 @@ Two big tradeoffs:
 
    In practice this isn't _that_ big of a problem. 1 bit-errors are
    usually much more common than 3 bit-errors, and at 4 bit-errors you're
-   going to have a collision anyways. Still, it's good to be aware of.
+   going to have a collision anyways. Still, this tradeoff is good to be
+   aware of.
 
-   ramcrc32bd's [`error_correction`][error-correction] lets you control
-   exactly how many bit-errors to attempt to repair in case detection is
-   more valuable.
+   ramcrc32bd's [`error_correction`][error-correction] config option lets
+   you control exactly how many bit-errors to attempt to repair in case
+   better detection is more useful.
 
 2. Brute force doesn't really scale.
 
    The error-correction implemented here grows $O(n^e)$ for $e$
-   bit-errors, which isn't really great.
+   bit-errors, which really isn't great.
 
    But for larger Hamming distances, CRCs are already pretty limited in
-   terms of message size, <=21 bytes for 3 bit-errors with CRC-32 for
-   example. So this may not be that big of a deal in practice.
+   terms of message size. littlefs's 32-bit CRC can only correct
+   3 bit-errors in messages <=21 bytes, for example. So in practice this
+   may not be that big of a deal.
 
-   ramcrc32bd's [`error_correction`][error-correction] can also help here
-   by limiting how many bit-errors to attempt to repair. If you set
-   `error_correction=1` and only repair 1-bit errors, the runtime reduces
-   to to $O(n)$, about the same runtime it takes to actually read the
-   message.
+   ramcrc32bd's [`error_correction`][error-correction] config option can
+   also help here by limiting how many bit-errors we attempt to repair.
+   If you set `error_correction=1`, the runtime reduces to to $O(n)$
+   worst case, which is roughly the same runtime it takes to read the
+   data from the underlying storage.
 
 
 ### Testing
