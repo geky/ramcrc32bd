@@ -122,7 +122,7 @@ code = '''
     cfg_.prog(&cfg_, 0, 0, buffer, WIDTH*HEIGHT) => 0;
 
     // print the repaired contents on disk, including any ecc
-    printf("repaired:\n");
+    printf("corrected:\n");
     printpixelart(ramcrc32bd.buffer, WIDTH + sizeof(uint32_t), HEIGHT);
 
     ramcrc32bd_destroy(&cfg_) => 0;
