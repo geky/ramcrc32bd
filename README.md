@@ -28,6 +28,15 @@ in the meantime, a RAM-backed block device provides a simple example of
 error-correction that users may be able to reimplement in their own
 block devices.
 
+### Testing
+
+Testing is a bit jank right now, relying on littlefs's test runner:
+
+``` bash
+$ git clone https://github.com/littlefs-project/littlefs -b v2.9.3 --depth 1
+$ make test -j
+```
+
 ### How it works
 
 First, a quick primer on [CRCs][crc].
