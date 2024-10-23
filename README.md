@@ -134,9 +134,12 @@ You can describe this mathematically in [GF(2)][gf2] (the extra
 $x^{\left|P\right|}$ represents shifting the message to make space for
 the CRC), but the above example is probably easier to understand:
 
-``` math
-C(x) = M(x) x^{\left|P\right|} - (M(x) x^{\left|P\right|} \bmod P(x))
-```
+<p align="center">
+<img
+    alt="C(x) = M(x) x^{\left|P\right|} - (M(x) x^{\left|P\right|} \bmod P(x))"
+    src="https://latex.codecogs.com/svg.image?C%28x%29%20%3d%20M%28x%29%20x%5e%7b%5cleft%7cP%5cright%7c%7d%20%2d%20%28M%28x%29%20x%5e%7b%5cleft%7cP%5cright%7c%7d%20%5cbmod%20P%28x%29%29"
+>
+</p>
 
 The neat thing is that this remainder operation does a real good job of
 mixing up all the bits. So if you choose a good CRC polynomial, it's very
