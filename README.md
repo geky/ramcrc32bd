@@ -131,12 +131,12 @@ crc = 0x3b
 ```
 
 You can describe this mathematically in [GF(2)][gf2] (the extra
-$x^{\left|P(x)\right|}$ represents shifting the message to make space for
+$x^{\left|P\right|}$ represents shifting the message to make space for
 the CRC), but the above example is probably easier to understand:
 
-$$
-C(x) = M(x) x^{\left|P(x)\right|} - (M(x) x^{\left|P(x)\right|} \bmod P(x))
-$$
+``` math
+C(x) = M(x) x^{\left|P\right|} - (M(x) x^{\left|P\right|} \bmod P(x))
+```
 
 The neat thing is that this remainder operation does a real good job of
 mixing up all the bits. So if you choose a good CRC polynomial, it's very
