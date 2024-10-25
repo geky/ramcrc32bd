@@ -320,6 +320,7 @@ int ramcrc32bd_erase(const struct lfs_config *cfg, lfs_block_t block) {
     LFS_ASSERT(block < cfg->block_count);
 
     // erase is a noop
+    (void)cfg;
     (void)block;
 
     RAMCRC32BD_TRACE("ramcrc32bd_erase -> %d", 0);
