@@ -350,14 +350,15 @@ Using CRCs for error-correction has two big caveats:
 1. For _any_ error-correcting code, attempting to _correct_ errors
    reduces the code's ability to _detect_ errors.
 
-   In the HD=4 example, when we assumed 1 bit-error, if there were
-   actually 3 bit-errors, we would have assumed wrong and "corrected" to
-   the wrong codeword.
+   In the HD=4 example, we assumed 1 bit-error. If we were wrong and
+   there were actually 3 bit-errors, we would have "corrected" to the
+   wrong codeword.
 
    In practice this isn't _that_ big of a problem. 1 bit-errors are
    usually much more common than 3 bit-errors, and at 4 bit-errors you're
-   going to have a collision anyways. Still, this tradeoff is good to be
-   aware of.
+   going to have a collision anyways.
+
+   Still, it's good to be aware of this tradeoff.
 
    ramcrc32bd's [`error_correction`][error-correction] config option lets
    you control exactly how many bit-errors to attempt to repair in case
