@@ -258,12 +258,12 @@ There are a few tricks worth noting in ramcrc32bd:
 
 1. Try the faster solutions first.
 
-   Correcting 1 bit-error, $O(n)$, is much faster than correcting
-   2 bit-errors, $O(n^2)$, and 1 bit-errors are also much more common. It
+   Correcting 1 bit-error $O(n)$, is much faster than correcting
+   2 bit-errors $O(n^2)$, and 1 bit-errors are also much more common. It
    makes sense to only search for more bit-errors when a solution with
    fewer bit-errors can't be found.
 
-   This means ramcrc32bd should read quite quickyl in the common case of
+   This means ramcrc32bd should read quite quickly in the common case of
    few/none bit-errors. Though this does risk reads sort of slowing down
    as bit-errors develop.
 
@@ -343,7 +343,7 @@ There are a few tricks worth noting in ramcrc32bd:
 
    See [ramcrc32bd_read][ramcrc32bd_read] for an implementation of this.
 
-### Tradeoffs
+### Caveats
 
 Using CRCs for error-correction has two big caveats:
 
