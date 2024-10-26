@@ -137,9 +137,9 @@ binary division:
 crc = 0x3b
 ```
 
-You can describe this mathematically in [GF(2)][gf2] (the extra
-$x^{\left|P\right|}$ represents shifting the message to make space for
-the CRC), but the above example is probably easier to understand:
+You can describe this mathematically in [GF(2)][gf2], but depending on
+your experience with GF(2) and other finite-fields, the above example is
+probably easier to understand:
 
 <p align="center">
 <img
@@ -148,9 +148,15 @@ the CRC), but the above example is probably easier to understand:
 >
 </p>
 
+The extra $x^{\left|P\right|} multiplications represent shifting the
+message to make space for the CRC, and gives us what's called a
+["systematic code"][systematic-code]. Alternatively we could actually
+multiply the message with our polynomial to get valid codewords, but that
+would just make everything more annoying without much benefit...
+
 The neat thing is that this remainder operation does a real good job of
 mixing up all the bits. So if you choose a good CRC polynomial, it's very
-unlikely a message with a bit-error will result in the same CRC.
+unlikely a message with a bit-error will result in the same CRC:
 
 ```
 a couple bit errors:
