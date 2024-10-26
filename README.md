@@ -368,16 +368,19 @@ Using CRCs for error-correction has two big caveats:
    The error-correction implemented here grows $O(n^e)$ for $e$
    bit-errors, which really isn't great.
 
-   But for larger Hamming distances, CRCs are already pretty limited in
-   terms of message size. littlefs's 32-bit CRC can only correct
-   3 bit-errors in messages <=21 bytes, for example. So in practice this
-   may not be that big of a deal.
+   That being said, larger CRC Hamming distances are also pretty limited
+   in terms of message size, so this performance may be excusable if
+   messages are small and bit-errors are rare.
 
    ramcrc32bd's [`error_correction`][error-correction] config option can
    also help here by limiting how many bit-errors we attempt to repair.
-   If you set `error_correction=1`, the runtime reduces to to $O(n)$
-   worst case, which is roughly the same runtime it takes to read the
-   data from the underlying storage.
+   If you set `error_correction=1`, for example, the runtime reduces to
+   $O(n)$ worst case, which is roughly the same runtime it takes to read
+   the data from the underlying storage.
+
+   But if you need a performant error-correcting block device, consider
+   ramcrc32bd's big brother, [ramrsbd][ramrsbd], which brings the
+   decoding cost down to $O(ne + e^2)$.
 
 ---
 
