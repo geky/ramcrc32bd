@@ -240,7 +240,7 @@ brute force search:
     ^                 1                   => 11101001 (0xe9 != 0x3b)
     ^                   1                 => 01110101 (0x75 != 0x3b)
     ^                    1                => 00111011 (0x3b == 0x3b) !!! found our bit-error
-                                                         ^- note no CRC repeats
+
 corrected message:
     = 01101000 01101001 00100001 00000000 => 00111011 (0x3b == 0x3b)
 ```
@@ -264,83 +264,103 @@ There are a couple implementation tricks worth noting in ramcrc32bd:
    makes sense to only search for more bit-errors when a solution with
    fewer bit-errors can't be found.
 
-   This means ramcrc32bd should read quite quickly in the common case of
-   few/none bit-errors. Though this does risk reads sort of slowing down
-   as bit-errors develop.
+   By trying fewer bit-errors first, ramcrc32bd should return quickly in
+   the common case of few/no bit-errors.
 
-2. We don't actually need to permute the message for every bit-flip.
+   Though this does risk degraded performance over time as bit-errors
+   develop.
 
-   CRCs are pretty nifty in that they're linear. The CRC of the xor
-   of two messages is equivalent to the xor of the two CRCS:
+2. We don't actually need to permute the message to try every bit-flip.
 
-   ```
-   crc(a xor b):
-       = 01101000 01101001 01100001 00000000
-       ^                    1
-       -------------------------------------
-       = 01101000 01101001 00100001 00000000 => 00111011 (0x3b == 0x3b)
-
-   crc(a) xor crc(b):
-       = 01101000 01101001 01100001 00000000 =>   11111100 (0xfc)
-       ^                    1                => ^ 11000111 (0xc7)
-                                                ----------
-                                                = 00111011 (0x3b == 0x3b)
-   ```
-
-   This means we can quickly check the effect of a bit-flip by xoring our
-   CRC with the CRC of the bit flip.
-
-   If this wasn't convenient enough, shifting (multiplying by 2) is also
-   preserved over CRCs:
+   First note that since CRCs are a glorified remainder operation,
+   shifting a message (multiplying by $x$ in GF(2)) and then calculating
+   the CRC is equivalent to shifting the CRC and then calculating the
+   remainder:
 
    ```
    crc(a << 1):
-       =                     1               => 11100000 (0xe0)
-       s                    1                => 11000111 (0xc7)
+       = 00111001 10110100 00110110 00000000 => 01000010 (0x42)
+       s 01110011 01101000 01101100 00000000 => 10000100 (0x84)
+       s 11100110 11010000 11011000 00000000 => 00001111 (0x0f)
 
-   crc(crc(a) << 1):
-       =                     1               =>     11100000 (0xe0)
-                                                s 1 11000000
+   (crc(a) << 1) % p:
+       = 00111001 10110100 00110110 00000000 =>     01000010 (0x42)
+                                                s 0 10000100
+                                                ^ 0 00000000
+                                                =   10000100 (0x84)
+                                                s 1 00001000
                                                 ^ 1 00000111
-                                                ------------
-                                                = 0 11000111 (0xc7)
+                                                =   00001111 (0x0f)
    ```
 
-   So testing every bit-flip requires only a single register that we
-   repeatedly shift and xor until we find a CRC match (or don't).
+   We can use this to quickly iterate through all CRCs that represent a
+   single bit:
 
-   Once we find a match, we can use the number of shifts to figure out
-   which bit we needed to flip in the original message:
+   ```
+   a = (a << 1) % p:
+       =                            00000001 => 00000001 (0x01)
+       s                            00000010 => 00000010 (0x02)
+       s                            00000100 => 00000100 (0x04)
+       s                            00001000 => 00001000 (0x08)
+       s                            00010000 => 00010000 (0x10)
+       s                            00100000 => 00100000 (0x20)
+       s                            01000000 => 01000000 (0x40)
+       s                            10000000 => 10000000 (0x80)
+       s                         (1)00000000 => 00001110 (0x0e)
+       s                        (1) 00000000 => 00011100 (0x1c)
+       s                       (1)  00000000 => 00111000 (0x38)
+       s                      (1)   00000000 => 01110000 (0x70)
+       s                     (1)    00000000 => 11100000 (0xe0)
+       s                    (1)     00000000 => 11000111 (0xc7)
+       s                   (1)      00000000 => 10001001 (0x89)
+       s                  (1)       00000000 => 00010101 (0x15)
+   ```
+
+   Combining this with the fact that CRCs are linear, i.e. the CRC of the
+   xor of two messages (addition in GF(2)) is equivalent to the xor of
+   two CRCs:
+
+   ```
+   crc(a ^ b):
+       = 01100001 01100100 01100100 00000000
+       ^ 00011001 00001011 00010110 00000000
+       = 01111000 01101111 01110010 00000000 => 01011001 (0x59)
+
+   crc(a) ^ crc(b):
+       = 01100001 01100100 01100100 00000000 =>   00110100 (0x34)
+       ^ 00011001 00001011 00010110 00000000 => ^ 01101101 (0x6d)
+                                                = 01011001 (0x59)
+   ```
+
+   And we can quickly test the affect of every possible bit-flip by
+   shifting a single register per simulated bit-flip and xoring it
+   into our original CRC:
 
    ```
    fancy brute force search:
        = 01101000 01101001 01100001 00000000 => 11111100 (0xfc != 0x3b)
-       s                          0 00000001 => 11111101 (0xfd != 0x3b)
-       s                          0 00000010 => 11111110 (0xfe != 0x3b)
-       s                          0 00000100 => 11111000 (0xf8 != 0x3b)
-       s                          0 00001000 => 11110100 (0xf4 != 0x3b)
-       s                          0 00010000 => 11101100 (0xec != 0x3b)
-       s                          0 00100000 => 11011100 (0xdc != 0x3b)
-       s                          0 01000000 => 10111100 (0xbc != 0x3b)
-       s                          0 10000000 => 01111100 (0x7c != 0x3b)
-       s                          1 00000000
-       ^                          1 00000111
-       =                         (1)00000111 => 11111011 (0xfb != 0x3b)
-       s                        (1) 00001110 => 11110010 (0xf2 != 0x3b)
-       s                       (1)0 00011100 => 11100000 (0xe0 != 0x3b) 
-       s                      (1) 0 00111000 => 11000100 (0xc4 != 0x3b) 
-       s                     (1)  0 01110000 => 10001100 (0x8c != 0x3b) 
-       s                    (1)   0 11100000 => 00011100 (0x1c != 0x3b) 
-       s                          1 11000000
-       ^                          1 00000111
-       =                   (1)    0 11000111 => 00111011 (0x3b == 0x3b) !!! found our bit-error
-                                                            ^- note no CRC repeats
+       ^                            00000001 => 11111101 (0xfd != 0x3b)
+       ^                            00000010 => 11111110 (0xfe != 0x3b)
+       ^                            00000100 => 11111000 (0xf8 != 0x3b)
+       ^                            00001000 => 11110100 (0xf4 != 0x3b)
+       ^                            00010000 => 11101100 (0xec != 0x3b)
+       ^                            00100000 => 11011100 (0xdc != 0x3b)
+       ^                            01000000 => 10111100 (0xbc != 0x3b)
+       ^                            10000000 => 01111100 (0x7c != 0x3b)
+       ^                         (1)00000111 => 11111011 (0xfb != 0x3b)
+       ^                        (1) 00001110 => 11110010 (0xf2 != 0x3b)
+       ^                       (1)  00011100 => 11100000 (0xe0 != 0x3b)
+       ^                      (1)   00111000 => 11000100 (0xc4 != 0x3b)
+       ^                     (1)    01110000 => 10001100 (0x8c != 0x3b)
+       ^                    (1)     11100000 => 00011100 (0x1c != 0x3b)
+       ^                   (1)      11000111 => 00111011 (0x3b == 0x3b) !!! found our bit-error
+
    corrected message:
        = 01101000 01101001 00100001 00000000 => 00111011 (0x3b == 0x3b)
    ```
 
-   Still $O(n^e)$, but limited only by your CPU's shift, xor, and
-   branching hardware. No memory accesses required.
+   The end result is still $O(n^e)$, but limited only by your CPU's
+   shift, xor, and branching hardware. No memory accesses required.
 
    See [ramcrc32bd_read][ramcrc32bd_read] for an implementation of this.
 
