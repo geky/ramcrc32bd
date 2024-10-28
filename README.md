@@ -163,7 +163,7 @@ a couple bit errors:
     = 01101010 01101001 00100001 00000000 => 11101101 (0xed != 0x3b)
     = 01101000 01101000 00100001 00000000 => 00101110 (0x2e != 0x3b)
     = 01101000 01101001 01100001 00000000 => 11111100 (0xfc != 0x3b)
-    = 01101000 01101001 00100001 00000100 => 00110011 (0x33 != 0x3b)
+    = 01101000 01101001 00100001 00001000 => 00110011 (0x33 != 0x3b)
 ```
 
 How unlikely? Well thanks to Philip Koopman's [exhaustive CRC work][koopman-crc],
@@ -177,7 +177,8 @@ distance of 4 up to a message size of 119 bits (14 bytes), which means
 our 3-byte message should have no collisions up until 4 bit-errors:
 
 ```
-TODO
+a collision:
+    = 01101000 01101000 00100110 00000000 => 00111011 (0x3b == 0x3b)
 ```
 
 But the interesting thing about Hamming distance is that it's, well, a
