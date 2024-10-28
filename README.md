@@ -148,8 +148,8 @@ be easier to understand:
 >
 </p>
 
-The extra $x^{|P|} multiplications represent shifting the message to make
-space for the CRC, and gives us what's called a
+The extra $x^{|P|}$ multiplications represent shifting the message to
+make space for the CRC, and gives us what's called a
 ["systematic code"][systematic-code]. Alternatively we could actually
 multiply the message with our polynomial to get valid codewords, but that
 would just make interacting with the message more annoying without much
