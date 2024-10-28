@@ -47,8 +47,8 @@ of error detection and correction, capable of repairing a handful of
 bit-errors.
 
 It does scale poorly, $O(n^e)$, but if you're only worried about the
-occasional one or two bit errors, this may be sufficient. It's hard to
-beat the simplicity, low-cost, and hardware available for CRCs.
+occasional one or two bit errors, it may be sufficient. It's hard to
+beat the simplicity, low-cost, and hardware availability of CRCs.
 
 This block device uses littlefs's CRC-32, since we assume it's already
 available. But the same idea can be extended to any other CRC, as long
@@ -143,13 +143,13 @@ probably easier to understand:
 
 <p align="center">
 <img
-    alt="C(x) = M(x) x^{\left|P\right|} - (M(x) x^{\left|P\right|} \bmod P(x))"
-    src="https://latex.codecogs.com/svg.image?C%28x%29%20%3d%20M%28x%29%20x%5e%7b%5cleft%7cP%5cright%7c%7d%20%2d%20%28M%28x%29%20x%5e%7b%5cleft%7cP%5cright%7c%7d%20%5cbmod%20P%28x%29%29"
+    alt="C(x) = M(x) x^{|P|} - \left(M(x) x^{|P|} \bmod P(x)\right)"
+    src="https://latex.codecogs.com/svg.image?C%28x%29%20%3d%20M%28x%29%20x%5e%7b%7cP%7c%7d%20%2d%20%5cleft%28M%28x%29%20x%5e%7b%7cP%7c%7d%20%5cbmod%20P%28x%29%5cright%29"
 >
 </p>
 
-The extra $x^{\left|P\right|} multiplications represent shifting the
-message to make space for the CRC, and gives us what's called a
+The extra $x^{|P|} multiplications represent shifting the message to make
+space for the CRC, and gives us what's called a
 ["systematic code"][systematic-code]. Alternatively we could actually
 multiply the message with our polynomial to get valid codewords, but that
 would just make everything more annoying without much benefit...
@@ -183,7 +183,7 @@ TODO
 But the interesting thing about Hamming distance is that it's, well, a
 distance.
 
-A Hamming distance of 4 means that there is at least 3 invalid codewords
+A Hamming distance of 4 means that there are at least 3 invalid codewords
 between every valid codeword:
 
 ```
@@ -201,7 +201,7 @@ away from the original codeword, and at least 3 bit-flips away from any
 other codeword. It's not until we have 2 bit-errors that the original
 codeword becomes ambiguous.
 
-But this is only an 8-bit CRC. Generally, more bits means a better CRC.
+But this is only an 8-bit CRC. With more bits, we can find a better CRC.
 littlefs's 32-bit CRC, for example, has a Hamming distance of 7 up to
 171 bits (21 bytes), which means for any message <=21 bytes we can
 reliably correct up to 3 bit-errors.
@@ -254,7 +254,7 @@ with littlefs's CRC-32.
 
 ### Tricks
 
-There are a few tricks worth noting in ramcrc32bd:
+There are a couple implementation tricks worth noting in ramcrc32bd:
 
 1. Try the faster solutions first.
 
@@ -345,7 +345,7 @@ There are a few tricks worth noting in ramcrc32bd:
 
 ### Caveats
 
-Using CRCs for error-correction has two big caveats:
+And some caveats:
 
 1. For _any_ error-correcting code, attempting to _correct_ errors
    reduces the code's ability to _detect_ errors.
