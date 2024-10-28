@@ -90,8 +90,8 @@ First, a quick primer on [CRCs][crc].
 
 Some of why CRCs are so prevalent because they are mathematically quite
 pure. You view your message as a big [binary polynomial][binary-polynomial],
-divide it by a predefined polynomial (choosing a good CRC polynomial is
-the hard part), and the remainder is your CRC:
+divide it by a predetermined "generator polynomial" (choosing a good
+polynomial is the hard part), and the remainder is your CRC:
 
 ```
 message = "hi!":
@@ -138,8 +138,8 @@ crc = 0x3b
 ```
 
 You can describe this mathematically in [GF(2)][gf2], but depending on
-your experience with GF(2) and other finite-fields, the above example is
-probably easier to understand:
+your experience with GF(2) and other finite-fields, the above example may
+be easier to understand:
 
 <p align="center">
 <img
@@ -152,7 +152,8 @@ The extra $x^{|P|} multiplications represent shifting the message to make
 space for the CRC, and gives us what's called a
 ["systematic code"][systematic-code]. Alternatively we could actually
 multiply the message with our polynomial to get valid codewords, but that
-would just make everything more annoying without much benefit...
+would just make interacting with the message more annoying without much
+benefit...
 
 The neat thing is that this remainder operation does a real good job of
 mixing up all the bits. So if you choose a good CRC polynomial, it's very
