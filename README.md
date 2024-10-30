@@ -46,14 +46,21 @@ Often overlooked, the humble [CRC][crc] can already provide a simple form
 of error detection and correction, capable of repairing a handful of
 bit-errors.
 
+Assuming a [Hamming distance][hamming-distance] `HD` for a given codeword
+size, ramcrc32bd can correct up to `floor((HD-1)/2)` bit errors. In its
+current configuration, ramcrc32bd can correct:
+
+- 1 bit error up to ~512 KiB codewords  (HD=3 up to 4294967263 bits)
+- 2 bit errors up to 371 byte codewords (HD=5 up to 2974 bits)
+- 3 bit errors up to 21 byte codewords  (HD=7 up to 171 bits)
+
 It does scale poorly, $O(n^e)$, but if you're only worried about the
 occasional one or two bit errors, it may be sufficient. It's hard to
 beat the simplicity, low-cost, and hardware availability of CRCs.
 
 This block device uses littlefs's CRC-32, since we assume it's already
 available. But the same idea can be extended to any other CRC, as long
-as it has a sufficient [Hamming distance][hamming-distance] for the
-expected number of bit-errors.
+as it has a sufficient Hamming distasnce for the desired codeword size.
 
 A quick comparison of current ram-ecc-bds:
 
@@ -70,7 +77,7 @@ See also:
 ## RAM?
 
 Right now, [littlefs's][littlefs] block device API is limited in terms of
-composability. It would be great to fix this on a major API change, but
+composability. While it would be great to fix this on a major API change,
 in the meantime, a RAM-backed block device provides a simple example of
 error-correction that users may be able to reimplement in their own
 block devices.
@@ -205,13 +212,13 @@ away from the original codeword, and at least 3 bit-flips away from any
 other codeword. It's not until we have 2 bit-errors that the original
 codeword becomes ambiguous.
 
-But this is only an 8-bit CRC. With more bits, we can find a better CRC.
-littlefs's 32-bit CRC, for example, has a Hamming distance of 7 up to
-171 bits (21 bytes), which means for any message <=21 bytes we can
-reliably correct up to 3 bit-errors.
+But this is only an 8-bit CRC. With more bits, we can usually find a
+better CRC. littlefs's 32-bit CRC, for example, has a Hamming distance of
+7 up to 171 bits (21 bytes), which means for any message $\le$ 21 bytes
+we can reliably correct up to 3 bit-errors.
 
 In general the number of bits we we can reliably correct is
-$\left\lfloor\frac{HD-1}{2}\right\rfloor$.
+$\left\lfloor\frac{\text{HD}-1}{2}\right\rfloor$.
 
 ### There's always brute force
 
