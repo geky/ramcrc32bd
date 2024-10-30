@@ -67,7 +67,7 @@ See also:
 - [littlefs][littlefs]
 - [ramrsbd][ramrsbd]
 
-### RAM?
+## RAM?
 
 Right now, [littlefs's][littlefs] block device API is limited in terms of
 composability. It would be great to fix this on a major API change, but
@@ -75,7 +75,7 @@ in the meantime, a RAM-backed block device provides a simple example of
 error-correction that users may be able to reimplement in their own
 block devices.
 
-### Testing
+## Testing
 
 Testing is a bit jank right now, relying on littlefs's test runner:
 
@@ -84,7 +84,7 @@ $ git clone https://github.com/littlefs-project/littlefs -b v2.9.3 --depth 1
 $ make test -j
 ```
 
-### How it works
+## How it works
 
 First, a quick primer on [CRCs][crc].
 
@@ -167,6 +167,8 @@ a couple bit errors:
     = 01101000 01101001 00100001 00001000 => 00110011 (0x33 != 0x3b)
 ```
 
+### Hamming distance
+
 How unlikely? Well thanks to Philip Koopman's [exhaustive CRC work][koopman-crc],
 we know exactly how many bit errors we need to see a collision for a
 given CRC polynomial and message size. This is called the
@@ -211,7 +213,7 @@ reliably correct up to 3 bit-errors.
 In general the number of bits we we can reliably correct is
 $\left\lfloor\frac{HD-1}{2}\right\rfloor$.
 
----
+### There's always brute force
 
 Ok, but that's enough about theory. How do actually correct these
 bit-errors?
@@ -254,7 +256,7 @@ force searching multiple bit-errors with nested loops. See
 [ramcrc32bd_read][ramcrc32bd_read] for an example of up to 3 bit-errors
 with littlefs's CRC-32.
 
-### Tricks
+## Tricks
 
 There are a couple implementation tricks worth noting in ramcrc32bd:
 
@@ -365,7 +367,7 @@ There are a couple implementation tricks worth noting in ramcrc32bd:
 
    See [ramcrc32bd_read][ramcrc32bd_read] for an implementation of this.
 
-### Caveats
+## Caveats
 
 And some caveats:
 
