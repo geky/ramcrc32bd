@@ -29,6 +29,13 @@ extern "C"
 struct ramcrc32bd_config {
     // Size of a codeword in bytes.
     //
+    // Smaller codewords have fewer collisions and we can correct more
+    // bit errors:
+    //
+    // - code_size<=536870907 => 1 bit error correctable
+    // - code_size<=371 => 2 bit errors correctable
+    // - code_size<=21 => 3 bit errors correctable
+    //
     // A crc32 is 4 bytes, so read_size and prog_size = code_size - 4.
     lfs_size_t code_size;
 
