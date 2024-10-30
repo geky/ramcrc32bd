@@ -378,16 +378,16 @@ There are a couple implementation tricks worth noting in ramcrc32bd:
 
 And some caveats:
 
-1. For _any_ error-correcting code, attempting to _correct_ errors
-   reduces the code's ability to _detect_ errors.
+1. For any error-correcting code, attempting to **correct** errors
+   reduces the code's ability to **detect** errors.
 
    In the HD=4 example, we assumed 1 bit-error. If we were wrong and
    there were actually 3 bit-errors, we would have "corrected" to the
    wrong codeword.
 
-   In practice this isn't _that_ big of a problem. 1 bit-errors are
-   usually much more common than 3 bit-errors, and at 4 bit-errors you're
-   going to have a collision anyways.
+   In practice this isn't that big of a problem. Fewer bit-errors are
+   usually more common, and correcting bit-errors is usually more useful.
+   At 4 bit-errors you're going to end up with full collisions anyways.
 
    Still, it's good to be aware of this tradeoff.
 
