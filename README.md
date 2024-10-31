@@ -266,8 +266,8 @@ bit-errors, making our original codeword unrecoverable.
 
 This idea can be extended to CRCs with larger Hamming distances by brute
 force searching multiple bit-errors with nested loops. See
-[ramcrc32bd_read][ramcrc32bd_read] for an example of up to 3 bit-errors
-with littlefs's CRC-32.
+`ramcrc32bd_read` for an example of up to 3 bit-errors with littlefs's
+CRC-32.
 
 ## Tricks
 
@@ -378,7 +378,7 @@ There are a couple implementation tricks worth noting in ramcrc32bd:
    The end result is still $O(n^e)$, but limited only by your CPU's
    shift, xor, and branching hardware. No memory accesses required.
 
-   See [ramcrc32bd_read][ramcrc32bd_read] for an implementation of this.
+   See `ramcrc32bd_read` for an implementation of this.
 
 ## Caveats
 
@@ -397,9 +397,9 @@ And some caveats:
 
    Still, it's good to be aware of this tradeoff.
 
-   ramcrc32bd's [`error_correction`][error-correction] config option lets
-   you control exactly how many bit-errors to attempt to repair in case
-   better detection is more useful.
+   ramcrc32bd's `error_correction` config option lets you control exactly
+   how many bit-errors to attempt to repair in case better detection is
+   more useful.
 
 2. Brute force doesn't really scale.
 
@@ -410,11 +410,11 @@ And some caveats:
    in terms of message size, so this performance may be excusable if
    messages are small and bit-errors are rare.
 
-   ramcrc32bd's [`error_correction`][error-correction] config option can
-   also help here by limiting how many bit-errors we attempt to repair.
-   If you set `error_correction=1`, for example, the runtime reduces to
-   $O(n)$ worst case, which is roughly the same runtime it takes to read
-   the data from the underlying storage.
+   ramcrc32bd's `error_correction` config option can also help here by
+   limiting how many bit-errors we attempt to repair. If you set
+   `error_correction=1`, for example, the runtime reduces to $O(n)$ worst
+   case, which is roughly the same runtime it takes to read the data from
+   the underlying storage.
 
    But if you need a performant error-correcting block device, consider
    ramcrc32bd's big brother, [ramrsbd][ramrsbd], which brings the
