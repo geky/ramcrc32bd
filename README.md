@@ -42,13 +42,13 @@ corrected:
                   '':::::::::::'''                              :::'. '.'. :::   . . '.' '  '..'
 ```
 
-Often overlooked, the humble [CRC][crc] can already provide a simple form
-of error detection and correction, capable of repairing a handful of
+Often overlooked, the humble [CRC][w-crc] can already provide a simple
+form of error detection and correction, capable of repairing a handful of
 bit-errors.
 
-Assuming a [Hamming distance][hamming-distance] `HD` for a given codeword
-size, ramcrc32bd can correct up to `floor((HD-1)/2)` bit errors. In its
-current configuration, ramcrc32bd can correct:
+Assuming a Hamming distance `HD` for a given codeword size, ramcrc32bd
+can correct up to `floor((HD-1)/2)` bit errors. In its current
+configuration, ramcrc32bd can correct:
 
 - 1 bit error up to ~512 KiB codewords  (HD=3 up to 4294967263 bits)
 - 2 bit errors up to 371 byte codewords (HD=5 up to 2974 bits)
@@ -60,7 +60,8 @@ beat the simplicity, low-cost, and hardware availability of CRCs.
 
 This block device uses littlefs's CRC-32, since we assume it's already
 available. But the same idea can be extended to any other CRC, as long
-as it has a sufficient Hamming distasnce for the desired codeword size.
+as it has a sufficient [Hamming distance](#hamming-distance) for the
+desired codeword size.
 
 A quick comparison of current ram-ecc-bds:
 
@@ -93,10 +94,10 @@ $ make test -j
 
 ## How it works
 
-First, a quick primer on [CRCs][crc].
+First, a quick primer on [CRCs][w-crc].
 
 Some of why CRCs are so prevalent because they are mathematically quite
-pure. You view your message as a big [binary polynomial][binary-polynomial],
+pure. You view your message as a big [binary polynomial][w-polynomial-ring],
 divide it by a predetermined "generator polynomial" (choosing a good
 polynomial is the hard part), and the remainder is your CRC:
 
@@ -144,7 +145,7 @@ binary division:
 crc = 0x3b
 ```
 
-You can describe this mathematically in [GF(2)][gf2], but depending on
+You can describe this mathematically in [GF(2)][w-gf2], but depending on
 your experience with GF(2) and other finite-fields, the above example may
 be easier to understand:
 
@@ -157,7 +158,7 @@ be easier to understand:
 
 The extra $x^{|P|}$ multiplications represent shifting the message to
 make space for the CRC, and gives us what's called a
-["systematic code"][systematic-code]. Alternatively we could actually
+["systematic code"][w-systematic-code]. Alternatively we could actually
 multiply the message with our polynomial to get valid codewords, but that
 would just make interacting with the message more annoying without much
 benefit...
@@ -167,7 +168,7 @@ mixing up all the bits. So if you choose a good CRC polynomial, it's very
 unlikely a message with a bit-error will result in the same CRC:
 
 ```
-a couple bit errors:
+a couple 1-bit errors:
     = 01101010 01101001 00100001 00000000 => 11101101 (0xed != 0x3b)
     = 01101000 01101000 00100001 00000000 => 00101110 (0x2e != 0x3b)
     = 01101000 01101001 01100001 00000000 => 11111100 (0xfc != 0x3b)
@@ -176,18 +177,22 @@ a couple bit errors:
 
 ### Hamming distance
 
-How unlikely? Well thanks to Philip Koopman's [exhaustive CRC work][koopman-crc],
-we know exactly how many bit errors we need to see a collision for a
+How unlikely? Well thanks to [Philip Koopman's exhaustive CRC work][koopman-crc],
+we know exactly how many bit-errors we need to see a collision for a
 given CRC polynomial and message size. This is called the
-[Hamming distance][hamming-distance], and is a very useful metric for an
+[Hamming distance][w-hd], and is a very useful metric for an
 error-correcting code.
 
-For this 8-bit CRC, p=0x107, Philip Koopman's work shows a Hamming
-distance of 4 up to a message size of 119 bits (14 bytes), which means
-our 3-byte message should have no collisions up until 4 bit-errors:
+Koopman's [NOTES page][koopman-notes] may be the best starting point for
+interpreting these results. They're dense but an amazing resource!
+
+For this 8-bit CRC, [p=0x107][koopman-p=0x107], Philip Koopman's work
+shows a Hamming distance of 4 up to a message size of
+119 bits (14 bytes), which means our 3-byte message should have no
+collisions up until 4 bit-errors:
 
 ```
-a collision:
+a 4-bit collision:
     = 01101000 01101000 00100110 00000000 => 00111011 (0x3b == 0x3b)
 ```
 
@@ -213,9 +218,10 @@ other codeword. It's not until we have 2 bit-errors that the original
 codeword becomes ambiguous.
 
 But this is only an 8-bit CRC. With more bits, we can usually find a
-better CRC. littlefs's 32-bit CRC, for example, has a Hamming distance of
-7 up to 171 bits (21 bytes), which means for any message $\le$ 21 bytes
-we can reliably correct up to 3 bit-errors.
+better CRC. littlefs's 32-bit CRC, [p=0x104c11db7][koopman-p=0x104c11db7],
+for example, has a Hamming distance of 7 up to 171 bits (21 bytes), which
+means for any message $\le$ 21 bytes we can reliably correct up to
+3 bit-errors.
 
 In general the number of bits we we can reliably correct is
 $\left\lfloor\frac{\text{HD}-1}{2}\right\rfloor$.
@@ -226,7 +232,7 @@ Ok, but that's enough about theory. How do actually correct these
 bit-errors?
 
 The simple/naive/cheap answer is brute force. Try every bit-flip until we
-find a matching CRC. Since we know our Hamming distance is >=3, this
+find a matching CRC. Since we know our Hamming distance is $\ge$ 3, this
 should only ever find one valid codeword, the original codeword:
 
 ```
@@ -414,9 +420,28 @@ And some caveats:
    ramcrc32bd's big brother, [ramrsbd][ramrsbd], which brings the
    decoding cost down to $O(ne + e^2)$.
 
----
+## References
 
-https://users.ece.cmu.edu/~koopman/crc/c08/0x83_len.txt
-https://users.ece.cmu.edu/~koopman/crc/c32/0x82608edb_len.txt
+- [Koopman, P. - CRC Polynomial Zoo][koopman-crc]
+- [Koopman, P. - CRC Polynomial Zoo NOTES][koopman-notes]
 
+- [Wikipedia - Cyclic Redundancy Check (CRC)][w-crc]
+- [Wikipedia - Hamming Distance (HD)][w-hd]
+- [Wikipedia - Polynomial Ring][w-polynomial-ring]
+- [Wikipedia - GF(2)][w-gf2]
+- [Wikipedia - Systematic Code][w-systematic-code]
+
+[w-crc]: https://en.wikipedia.org/wiki/Cyclic_redundancy_check
+[w-hd]: https://en.wikipedia.org/wiki/Hamming_distance
+[w-polynomial-ring]: https://en.wikipedia.org/wiki/Polynomial_ring
+[w-gf2]: https://en.wikipedia.org/wiki/GF(2)
+[w-systematic-code]: https://en.wikipedia.org/wiki/Systematic_code
+
+[koopman-crc]: https://users.ece.cmu.edu/~koopman/crc
+[koopman-notes]: https://users.ece.cmu.edu/~koopman/crc/notes.html
+[koopman-p=0x107]: https://users.ece.cmu.edu/~koopman/crc/c08/0x83_len.txt
+[koopman-p=0x104c11db7]: https://users.ece.cmu.edu/~koopman/crc/c32/0x82608edb_len.txt
+
+[littlefs]: https://github.com/littlefs-project/littlefs
+[ramrsbd]: https://github.com/geky/ramrsbd
 
